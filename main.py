@@ -108,15 +108,20 @@ class ImmichFuse(Operations):
             return self._get_by_date(parts)
         elif parts[0] == 'people':
             return self._get_people(parts)
+        elif parts[0] == 'albums':
+            return self._get_albums(parts)
         else:
             return ['.', '..']
         
     def _main_menu(self):
-        return ['by-date', 'people', '.', '..']
+        return ['by-date', 'people', 'albums', '.', '..']
 
     def _get_by_date(self, path):
         return ['.', '..']
-
+    
+    def _get_albums(self, path):
+        return ['.', '..']
+    
     def _get_people(self, path):
         if len(path) == 1:    
             people = self.immich_api.get_people()
