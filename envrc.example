@@ -1,0 +1,2 @@
+export IMMICH_API_URL="https://photos.example.com/api"
+export IMMICH_API_KEY="FOOBAR"
