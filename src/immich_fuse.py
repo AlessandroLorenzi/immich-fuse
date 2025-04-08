@@ -70,8 +70,8 @@ class ImmichFuse(Operations):
             return self._get_by_date(parts)
         elif parts[0] == "people":
             return self._get_people(parts)
-        elif parts[0] == "albums":
-            return self._get_albums(parts)
+        elif parts[0] == "favs":
+            return self._get_favs(parts)
         else:
             return [".", ".."]
 
@@ -79,7 +79,7 @@ class ImmichFuse(Operations):
         """
         Directories in main directory, sort of main menu of the Immich FUSE filesystem.
         """
-        return ["by-date", "people", "albums", ".", ".."]
+        return ["by-date", "people", "favs", ".", ".."]
 
     def _get_by_date(self, path):
         """
@@ -93,8 +93,17 @@ class ImmichFuse(Operations):
             assets = self.immich_api.get_assets(bucket_name)
             return assets + [".", ".."]
 
-    def _get_albums(self, path):
-        return [".", ".."]
+    def _get_favs(self, path):
+        """
+        Manage the favs directory, fetch buckets and assets.
+        """
+        if len(path) == 1:
+            assets = self.immich_api.get_buckets(favs="true")
+            return assets + [".", ".."]
+        elif len(path) == 2:
+            bucket_name = path[1]
+            assets = self.immich_api.get_assets(bucket_name, favs="true")
+            return assets + [".", ".."]
 
     def _get_people(self, path):
         """
@@ -129,4 +138,10 @@ class ImmichFuse(Operations):
         if match:
             _, asset_id, _ = match.groups()
             return asset_id
+
+        match = re.match(r"^/favs/([^/]+)/([0-9abcdef-]+)_([^/]+)$", path)
+        if match:
+            _, asset_id, _ = match.groups()
+            return asset_id
+
         return None

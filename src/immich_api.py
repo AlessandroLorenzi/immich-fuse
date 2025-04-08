@@ -26,8 +26,7 @@ class ImmichApi:
         return people_list
     
     @cached(cache=TTLCache(maxsize=1024, ttl=600))
-    def get_buckets(self, person_name=None):
-        print(f"Fetching assets for person: {person_name}")
+    def get_buckets(self, person_name=None, favs=None):
         person_id = None
         if person_name:
             person_id = self.get_person_id(person_name)
@@ -37,13 +36,14 @@ class ImmichApi:
                 "isArchived": "false",
                 "size": "MONTH",
                 "personId": person_id,
+                "isFavorite": favs,
             },
         )
         bucket_names = [bucket["timeBucket"] for bucket in buckets]
         return bucket_names
 
     @cached(cache=TTLCache(maxsize=1024, ttl=600))
-    def get_assets(self, bucket_name, person_name=None):
+    def get_assets(self, bucket_name, person_name=None, favs=None):
         person_id = None
         if person_name:
             person_id = self.get_person_id(person_name)
@@ -56,6 +56,7 @@ class ImmichApi:
                 "size": "MONTH",
                 "timeBucket": bucket_name,
                 "personId": person_id,
+                "isFavorite": favs,
             },
         )
 
