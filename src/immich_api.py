@@ -1,6 +1,9 @@
 import os
 import requests
 from datetime import datetime
+from functools import lru_cache
+from cachetools import cached, TTLCache
+
 
 class ImmichApi:
     def __init__(self):
@@ -13,74 +16,87 @@ class ImmichApi:
             )
 
         self.http_client = CustomHttpClient(api_url, headers={"x-api-key": api_key})
-        # TODO: add cache for the photos
-
+    
+    @cached(cache=TTLCache(maxsize=1, ttl=600))
     def get_people(self):
         people = self.http_client.get("/people")
 
         people_list = [person["name"] for person in people["people"]]
         people_list = [person for person in people_list if person != ""]
         return people_list
-
-    def get_buckets_by_person(self, person_name):
-        people = self.http_client.get("/people")
+    
+    @cached(cache=TTLCache(maxsize=1024, ttl=600))
+    def get_buckets(self, person_name=None):
+        print(f"Fetching assets for person: {person_name}")
         person_id = None
-        for person in people["people"]:
-            if person["name"] == person_name:
-                person_id = person["id"]
-                break
-        if person_id is None:
-            return []
-
+        if person_name:
+            person_id = self.get_person_id(person_name)
         buckets = self.http_client.get(
             "/timeline/buckets",
             params={
                 "isArchived": "false",
-                "personId": person_id,
                 "size": "MONTH",
+                "personId": person_id,
             },
         )
         bucket_names = [bucket["timeBucket"] for bucket in buckets]
         return bucket_names
 
-    def get_photos_by_person(self, person_name, bucket_name):
+    @cached(cache=TTLCache(maxsize=1024, ttl=600))
+    def get_assets(self, bucket_name, person_name=None):
+        person_id = None
+        if person_name:
+            person_id = self.get_person_id(person_name)
+
+        assets = []
+        bucket_assets = self.http_client.get(
+            "/timeline/bucket",
+            params={
+                "isArchived": "false",
+                "size": "MONTH",
+                "timeBucket": bucket_name,
+                "personId": person_id,
+            },
+        )
+
+        for asset in bucket_assets:
+            asset_id = asset["id"]
+            originalFileName = asset["originalFileName"]
+            assets.append(f"{asset_id}_{originalFileName}")
+        return assets
+
+    @lru_cache(maxsize=128)
+    def get_person_id(self, person_name):
         people = self.http_client.get("/people")
         person_id = None
         for person in people["people"]:
             if person["name"] == person_name:
                 person_id = person["id"]
                 break
-        if person_id is None:
-            return []
+        return person_id
 
-        photos = []
-        bucket_photos = self.http_client.get(
-            "/timeline/bucket",
-            params={
-                "isArchived": "false",
-                "personId": person_id,
-                "size": "MONTH",
-                "timeBucket": bucket_name,
-            },
-        )
-        for photo in bucket_photos:
-            photo_id = photo["id"]
-            originalFileName = photo["originalFileName"]
-            photos.append(f"{photo_id}_{originalFileName}")
-        return photos
-
-    def get_asset_stats(self, photo_id):
-        asset = self.http_client.get(f"/assets/{photo_id}")
+    @lru_cache(maxsize=1024)
+    def get_asset_stats(self, asset_id):
+        asset = self.http_client.get(f"/assets/{asset_id}")
         if asset:
             return {
                 "id": asset["id"],
                 "file_size_in_byte": asset["exifInfo"]["fileSizeInByte"],
-                "date_time_original":  datetime.fromisoformat(asset["exifInfo"]["dateTimeOriginal"]).timestamp(),
-                "modifify_date": datetime.fromisoformat(asset["exifInfo"]["modifyDate"]).timestamp(),
+                "date_time_original": datetime.fromisoformat(
+                    asset["exifInfo"]["dateTimeOriginal"]
+                ).timestamp(),
+                "modifify_date": datetime.fromisoformat(
+                    asset["exifInfo"]["modifyDate"]
+                ).timestamp(),
             }
         else:
-            raise Exception(f"Asset with ID {photo_id} not found.")
-    
+            raise Exception(f"Asset with ID {asset_id} not found.")
+
+    @cached(cache=TTLCache(maxsize=128, ttl=600))
+    def get_asset(self, asset_id):
+        asset = self.http_client.get_asset(f"/assets/{asset_id}/original")
+        return asset
+
 
 class CustomHttpClient:
     def __init__(self, base_url, headers=None):
@@ -94,6 +110,14 @@ class CustomHttpClient:
         rsp = self.session.get(url, **kwargs)
         if rsp.status_code == 200:
             return rsp.json()
+        else:
+            raise Exception(f"Error: {rsp.status_code} - {rsp.text}")
+
+    def get_asset(self, endpoint, **kwargs):
+        url = f"{self.base_url}{endpoint}"
+        rsp = self.session.get(url, **kwargs)
+        if rsp.status_code == 200:
+            return rsp.content
         else:
             raise Exception(f"Error: {rsp.status_code} - {rsp.text}")
 
