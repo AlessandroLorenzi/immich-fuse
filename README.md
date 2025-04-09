@@ -6,36 +6,31 @@ Interact with your Immich server using filesystem.
 
 ```bash
 mkdir mnt
-./main.py ./mnt
+./src/main.py ./mnt
 ```
 
 ## Direcotry Structure
+
+The design of the directory structure is not stable. May change in the future, eg `YYYY/MM/DD` instead of the monthly bucket list.
 
 ### people
 
 Search photos by people
 
-> 👷🏼‍♂️ Work in progress
-
 * `ls people` - List all people in your Immich server.
-* `ls people/username` - List all photos of a person in your Immich server.
+* `ls people/username` - List all montly buckets.
+* `ls people/username/YYYY-MM-DDT00:00:00.000Z` - List all photos in bucket.
 
 ### by-date
 
-Search photos by date, year, month, and day.
+Search photos by date.
 
-> Not yet implemented
+* `ls by-date` - List all montly buckets
+* `ls by-date/YYYY-MM-DDT00:00:00.000Z` - List all photos in bucket.
 
-* `ls by-date` - List all years
-* `ls by-date/2023` - List all months
-* `ls by-date/2023/01` - List all days
-* `ls by-date/2023/01/01` - List all photos of a day
+### favs
 
-### albums
+Search favorite photos
 
-List all albums in your Immich server and photos of an album.
-
-> Not yet implemented
-
-* `ls albums` - List all albums
-* `ls albums/album-name` - List all photos of an album
+* `ls favs` - List all montly buckets
+* `ls favs/YYYY-MM-DDT00:00:00.000Z` - List all photos in bucket.
