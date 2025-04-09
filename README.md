@@ -9,7 +9,7 @@ mkdir mnt
 ./src/main.py ./mnt
 ```
 
-## Direcotry Structure
+## Directry Structure
 
 The design of the directory structure is not stable. May change in the future, eg `YYYY/MM/DD` instead of the monthly bucket list.
 
